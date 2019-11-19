@@ -81,7 +81,7 @@
     "@types/requirejs": "2.1.28",
     "@universalviewer/aleph": "0.0.1-pre.50",
     "@universalviewer/uv-cy-gb-theme": "1.1.2",
-    "@universalviewer/uv-en-gb-theme": "1.1.2",
+    "@universalviewer/uv-en-gb-theme": "MorphoSource/uv-en-gb-theme",
     "dashjs": "2.6.7",
     "hls.js": "0.9.1",
     "jquery": "3.3.1",
