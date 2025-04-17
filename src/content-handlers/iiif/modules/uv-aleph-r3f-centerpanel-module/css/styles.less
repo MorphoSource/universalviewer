@@ -11,6 +11,26 @@
     .centerPanel {  
       #viewer {
         background: none;
+
+        &.has-title {
+          #scene-toolbar {
+            top: -45px;
+          }
+        }
+
+        &:not(.has-title) {
+          #scene-toolbar {
+            top: -15px;
+          }
+        }
+
+        .control-component { 
+          background: #1f1f26 !important;
+        }
+
+        #annotation-toolbar {
+          bottom: 0;
+        }
       }
     }
   }

@@ -1,5 +1,5 @@
 const $ = require("jquery");
-import { AnnotationBody, Canvas, IExternalResource } from "manifesto.js";
+import { Annotation, AnnotationBody, Camera, Canvas, IExternalResource, PointSelector, SpecificResource, decomposeMatrix } from "manifesto.js";
 import { sanitize } from "../../../../Utils";
 import { IIIFEvents } from "../../IIIFEvents";
 import { CenterPanel } from "../uv-shared-module/CenterPanel";
@@ -9,7 +9,7 @@ import { Events } from "../../../../Events";
 import { Config } from "../../extensions/uv-model-viewer-extension/config/Config";
 import { createRoot, Root } from "react-dom/client";
 import { createElement } from "react";
-import { Viewer } from "aleph-r3f";
+import { SrcObj, Viewer } from "aleph-r3f";
 
 export class AlephR3FCenterPanel extends CenterPanel<
   Config["modules"]["centerPanel"]
@@ -46,6 +46,7 @@ export class AlephR3FCenterPanel extends CenterPanel<
     );
 
     this.title = this.extension.helper.getLabel();
+    if (this.title) this.$viewerContainer.addClass("has-title");
   }
 
   whenLoaded(cb: () => void): void {
@@ -57,22 +58,113 @@ export class AlephR3FCenterPanel extends CenterPanel<
   async openMedia(resources: IExternalResource[]) {
     await this.extension.getExternalResources(resources);
 
-    let mediaUri: string | null = null;
     let canvas: Canvas = this.extension.helper.getCurrentCanvas();
-    const formats: AnnotationBody[] | null = this.extension.getMediaFormats(
-      canvas
-    );
+    const annotations: Annotation[] = canvas.getContent();
 
-    if (formats && formats.length) {
-      mediaUri = formats[0].id;
-    } else {
-      mediaUri = canvas.id;
+    const paintingAnnotations: Annotation[] = annotations.filter(
+      (anno) => ([].concat(anno.getProperty('motivation')))[0] === 'painting'
+    );
+    const paintingAnnotationBodies: AnnotationBody[] = paintingAnnotations.map(
+      (annotation) => annotation.getBody()[0]
+    );
+    
+    const srcs: SrcObj[] = paintingAnnotationBodies.map((annotation) => {
+      if (annotation.getResourceID()) {
+        const srcObj: SrcObj = {
+          url: annotation.getResourceID() as string,
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1]
+        };
+
+        // Process transforms 
+        const matrix = annotation.getTransformMatrix();
+        if (matrix) {
+          const { translation, rotation, scale } = decomposeMatrix(matrix);
+          srcObj.position = translation.toArray().slice(0, 3) as [x: number, y: number, z: number];
+          srcObj.rotation = rotation.toArray().slice(0, 3) as [x: number, y: number, z: number];
+          srcObj.scale = scale.toArray().slice(0, 3) as [x: number, y: number, z: number];
+        }
+
+        return srcObj;
+      } else {
+        return null;
+      }
+    }).filter((srcObj): srcObj is SrcObj => !!srcObj);
+
+    const commentingAnnotations: Annotation[] = canvas.getNonContentAnnotations().filter(
+      (anno) => ([].concat(anno.getProperty('motivation')))[0] === 'commenting'
+    );
+    
+    const alephComments = commentingAnnotations.map((annotation) => {
+      const comment: {
+        label: string,
+        position: [x: number, y: number, z: number],
+        cameraPosition?: [x: number, y: number, z: number],
+        cameraTarget?: [x: number, y: number, z: number]
+      } = {
+        label: '',
+        position: [0.0, 0.0, 0.0] as [x: number, y: number, z: number]
+      }
+
+      // Comment annotation label
+      const body = annotation.getBody()[0];
+      if (body.getType() === 'textualbody') comment.label = body.getProperty("value") || "" ;
+
+      // Comment annotation position
+      const target = annotation.getTarget();
+      // target can either be scene reference (place at origin) or a specific resource
+      // todo - handle specific scenes
+      if (target.isSpecificResource) {
+        const selector = (target as SpecificResource).getSelector();
+        if (selector) {
+          const point = selector.getLocation();
+          if (point) {
+            comment.position = [ point.x, point.y, point.z ];
+          }
+        }
+      }
+
+      // If comment annotation has scope content state cameras, use first for annotation camera properties
+      const scopeContent = annotation.getScopeContent();
+      const camera = scopeContent.find(anno => anno?.getBody()[0]?.constructor?.name === 'Camera' );
+      if (camera) {
+        // Camera position
+        const cameraTarget = camera.getTarget();
+        if (cameraTarget.isSpecificResource) {
+          const cameraSelector = (cameraTarget as SpecificResource).getSelector();
+          if (cameraSelector) {
+            const cameraPosition = cameraSelector.getLocation();
+            if (cameraPosition) {
+              comment.cameraPosition = [ cameraPosition.x, cameraPosition.y, cameraPosition.z ];
+            }
+          }
+        }
+
+        // Camera target
+        // For now only works with point selector, update for annotation URI
+        const cameraBody = camera.getBody()[0] as Camera;
+        const lookAt = cameraBody.getLookAt();
+        if (lookAt instanceof PointSelector) {
+          const lookAtLocation = lookAt.getLocation();
+          comment.cameraTarget = [ lookAtLocation.x, lookAtLocation.y, lookAtLocation.z ];
+        }
+
+      }
+      
+      return comment;
+    });
+
+    // For now, if commenting annotations exist, put them on the first annotation src
+    if (alephComments.length && srcs.length) {
+      srcs[0].annotations = alephComments;
     }
+
 
     this.viewerRoot.render(
       createElement(Viewer, {
-        envPreset: 'warehouse',
-        src: mediaUri,
+        environmentMap: 'warehouse',
+        src: srcs,
         onLoad: (e) => {
           this.resize();
         },
