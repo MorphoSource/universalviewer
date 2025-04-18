@@ -13,7 +13,7 @@ import { ShareDialogue } from "./ShareDialogue";
 import { ExternalResourceType } from "@iiif/vocabulary/dist-commonjs/";
 import { Strings, Bools } from "@edsilv/utils";
 import { Canvas, LanguageMap } from "manifesto.js";
-import { ModelViewerExtensionEvents } from "./Events";
+import { AlephR3FExtensionEvents } from "./Events";
 import { Orbit } from "./Orbit";
 import "./theme/theme.less";
 import defaultConfig from "./config/config.json";
@@ -62,16 +62,59 @@ export default class AlephR3FExtension extends BaseExtension<Config> {
       }
     );
 
+    // Communication between UV and Aleph-r3f by wiring together JS events and UV PubSub events
+    // Aleph-r3f listens for JS event JSONEMITREQUEST and triggers JS event JSONEMIT in response
+
+    // When UV PubSub event JSONEMITREQUEST is received, emit it as JS event
     this.extensionHost.subscribe(
-      ModelViewerExtensionEvents.CAMERA_CHANGE,
-      (orbit: Orbit) => {
-        const canvas: Canvas = this.helper.getCurrentCanvas();
-        if (canvas) {
-          this.data.target = canvas.id + "#" + `orbit=${orbit.toString()}`;
-          this.fire(IIIFEvents.TARGET_CHANGE, this.data.target);
-        }
+      AlephR3FExtensionEvents.JSONEMITREQUEST,
+      () => {
+        console.log('emit request received in UV');
+        window.dispatchEvent(new Event(AlephR3FExtensionEvents.JSONEMITREQUEST));
       }
     );
+
+    // When JS event JSONEMIT is received, publish it through UV PubSub
+    window.addEventListener(AlephR3FExtensionEvents.JSONEMIT, (e: any) => {
+      console.log('emit received in JS pre-pubsub');
+      this.extensionHost.publish(
+        AlephR3FExtensionEvents.JSONEMIT,
+        e.detail
+      );
+    });
+
+    // Communication between UV and possible parent element (e.g. from iframe) via postMessage API
+
+    /**
+      The message invocation from the iframe parent looks like this:
+
+      iframe.contentWindow.postMessage({
+        type: 'aljsonemitrequest'
+      }, 'http://localhost:8081');
+
+     */
+
+    window.addEventListener('message', (e: any) => {
+      if (e.origin !== this.getAppUriBase()) return; 
+        
+      console.log('received message');
+      console.log(e);
+      if (e.data.type === AlephR3FExtensionEvents.JSONEMITREQUEST) {
+        this.extensionHost.publish(AlephR3FExtensionEvents.JSONEMITREQUEST);
+      }
+    });
+
+    this.extensionHost.subscribe(
+      AlephR3FExtensionEvents.JSONEMIT,
+      (json: any) => {
+        console.log('emit received from pubsub');
+        console.log('postMessage up to parent');
+        window.parent.postMessage({
+          type: AlephR3FExtensionEvents.JSONEMIT,
+          data: json
+        }, this.getAppUriBase());
+      }
+    ); 
   }
 
   createModules(): void {
@@ -252,6 +295,16 @@ export default class AlephR3FExtension extends BaseExtension<Config> {
     bookmark.type = ExternalResourceType.PHYSICAL_OBJECT;
 
     this.fire(IIIFEvents.BOOKMARK, bookmark);
+  }
+
+  getAppUriBase(): string {
+    const appUri: string =
+      window.location.protocol +
+      "//" +
+      window.location.hostname +
+      (window.location.port ? ":" + window.location.port : "");
+
+    return appUri;
   }
 
   getEmbedScript(template: string, width: number, height: number): string {

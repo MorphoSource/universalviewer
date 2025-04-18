@@ -1,7 +1,7 @@
-export class ModelViewerExtensionEvents {
-  static namespace: string = "modelviewerExtension.";
-  static CAMERA_CHANGE: string =
-    ModelViewerExtensionEvents.namespace + "cameraChange";
-  static DOUBLECLICK: string =
-    ModelViewerExtensionEvents.namespace + "doubleClick";
+export class AlephR3FExtensionEvents {
+  static namespace: string = "al";
+  static JSONEMIT: string =
+    AlephR3FExtensionEvents.namespace + "jsonemit";
+  static JSONEMITREQUEST: string =
+    AlephR3FExtensionEvents.namespace + "jsonemitrequest";
 }
