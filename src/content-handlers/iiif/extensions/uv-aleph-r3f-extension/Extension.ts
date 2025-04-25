@@ -69,14 +69,12 @@ export default class AlephR3FExtension extends BaseExtension<Config> {
     this.extensionHost.subscribe(
       AlephR3FExtensionEvents.JSONEMITREQUEST,
       () => {
-        console.log('emit request received in UV');
         window.dispatchEvent(new Event(AlephR3FExtensionEvents.JSONEMITREQUEST));
       }
     );
 
     // When JS event JSONEMIT is received, publish it through UV PubSub
     window.addEventListener(AlephR3FExtensionEvents.JSONEMIT, (e: any) => {
-      console.log('emit received in JS pre-pubsub');
       this.extensionHost.publish(
         AlephR3FExtensionEvents.JSONEMIT,
         e.detail
@@ -96,9 +94,7 @@ export default class AlephR3FExtension extends BaseExtension<Config> {
 
     window.addEventListener('message', (e: any) => {
       if (e.origin !== this.getAppUriBase()) return; 
-        
-      console.log('received message');
-      console.log(e);
+
       if (e.data.type === AlephR3FExtensionEvents.JSONEMITREQUEST) {
         this.extensionHost.publish(AlephR3FExtensionEvents.JSONEMITREQUEST);
       }
@@ -107,8 +103,6 @@ export default class AlephR3FExtension extends BaseExtension<Config> {
     this.extensionHost.subscribe(
       AlephR3FExtensionEvents.JSONEMIT,
       (json: any) => {
-        console.log('emit received from pubsub');
-        console.log('postMessage up to parent');
         window.parent.postMessage({
           type: AlephR3FExtensionEvents.JSONEMIT,
           data: json
