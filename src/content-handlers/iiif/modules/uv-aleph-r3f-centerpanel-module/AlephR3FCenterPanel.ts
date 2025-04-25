@@ -6,7 +6,7 @@ import { CenterPanel } from "../uv-shared-module/CenterPanel";
 import { Position } from "../uv-shared-module/Position";
 import { Async } from "@edsilv/utils";
 import { Events } from "../../../../Events";
-import { Config } from "../../extensions/uv-model-viewer-extension/config/Config";
+import { Config } from "../../extensions/uv-aleph-r3f-extension/config/Config";
 import { createRoot, Root } from "react-dom/client";
 import { createElement } from "react";
 import { SrcObj, Viewer } from "aleph-r3f";
@@ -47,6 +47,18 @@ export class AlephR3FCenterPanel extends CenterPanel<
 
     this.title = this.extension.helper.getLabel();
     if (this.title) this.$viewerContainer.addClass("has-title");
+
+    if (this.config.options.toolbarsEnabled) {
+      this.$viewerContainer.addClass("has-toolbars");
+    }
+
+    if (this.extension.data.config?.options?.footerPanelEnabled) {
+      this.$viewerContainer.addClass("has-footer-panel");
+    }
+
+    if (this.extension.data.config?.options?.rightPanelEnabled) {
+      this.$viewerContainer.addClass("has-right-panel");
+    }
   }
 
   whenLoaded(cb: () => void): void {
@@ -99,6 +111,7 @@ export class AlephR3FCenterPanel extends CenterPanel<
     const alephComments = commentingAnnotations.map((annotation) => {
       const comment: {
         label: string,
+        description?: string,
         position: [x: number, y: number, z: number],
         cameraPosition?: [x: number, y: number, z: number],
         cameraTarget?: [x: number, y: number, z: number]
@@ -110,6 +123,10 @@ export class AlephR3FCenterPanel extends CenterPanel<
       // Comment annotation label
       const body = annotation.getBody()[0];
       if (body.getType() === 'textualbody') comment.label = body.getProperty("value") || "" ;
+
+      // Comment annotation summary description
+      const summary = annotation.getSummary();
+      if (summary.getValue()) comment.description = summary.getValue()!;
 
       // Comment annotation position
       const target = annotation.getTarget();

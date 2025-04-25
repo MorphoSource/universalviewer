@@ -11,56 +11,50 @@ import {
   ShareDialogueOptions,
 } from "@/content-handlers/iiif/BaseConfig";
 
-type ModelViewerCenterPanelOptions = CenterPanelOptions & {
-  /** Determines if auto rotation is enabled */
-  autoRotateEnabled: boolean;
-  /** Delay in camera change */
-  cameraChangeDelay: number;
-  /** Determines if double click annotation is enabled */
-  doubleClickAnnotationEnabled: boolean;
-  /** Determines if interaction prompt is enabled */
-  interactionPromptEnabled: boolean;
+type AlephR3FCenterPanelOptions = CenterPanelOptions & {
+  /** Determines if annotation and control toolbars are enabled */
+  toolbarsEnabled: boolean;
 };
 
-type ModelViewerCenterPanelContent = CenterPanelContent & {};
+type AlephR3FCenterPanelContent = CenterPanelContent & {};
 
-type ModelViewerCenterPanel = {
-  options: ModelViewerCenterPanelOptions;
-  content: ModelViewerCenterPanelContent;
+type AlephR3FCenterPanel = {
+  options: AlephR3FCenterPanelOptions;
+  content: AlephR3FCenterPanelContent;
 };
 
-type ModelViewerDownloadDialogueOptions = DownloadDialogueOptions & {};
+type AlephR3FDownloadDialogueOptions = DownloadDialogueOptions & {};
 
-type ModelViewerDownloadDialogueContent = DownloadDialogueContent & {};
+type AlephR3FDownloadDialogueContent = DownloadDialogueContent & {};
 
-type ModelViewerDownloadDialogue = ModuleConfig & {
-  options: ModelViewerDownloadDialogueOptions;
-  content: ModelViewerDownloadDialogueContent;
+type AlephR3FDownloadDialogue = ModuleConfig & {
+  options: AlephR3FDownloadDialogueOptions;
+  content: AlephR3FDownloadDialogueContent;
 };
 
-type ModelViewerShareDialogueOptions = ShareDialogueOptions & {};
+type AlephR3FShareDialogueOptions = ShareDialogueOptions & {};
 
-type ModelViewerShareDialogueContent = ShareDialogueContent & {};
+type AlephR3FShareDialogueContent = ShareDialogueContent & {};
 
-type ModelViewerShareDialogue = ModuleConfig & {
-  options: ModelViewerShareDialogueOptions;
-  content: ModelViewerShareDialogueContent;
+type AlephR3FShareDialogue = ModuleConfig & {
+  options: AlephR3FShareDialogueOptions;
+  content: AlephR3FShareDialogueContent;
 };
 
-type ModelViewerSettingsDialogueOptions = SettingsDialogueOptions & {};
+type AlephR3FSettingsDialogueOptions = SettingsDialogueOptions & {};
 
-type ModelViewerSettingsDialogueContent = SettingsDialogueContent & {};
+type AlephR3FSettingsDialogueContent = SettingsDialogueContent & {};
 
-type ModelViewerSettingsDialogue = ModuleConfig & {
-  options: ModelViewerSettingsDialogueOptions;
-  content: ModelViewerSettingsDialogueContent;
+type AlephR3FSettingsDialogue = ModuleConfig & {
+  options: AlephR3FSettingsDialogueOptions;
+  content: AlephR3FSettingsDialogueContent;
 };
 
 type Modules = {
-  centerPanel: ModelViewerCenterPanel;
-  downloadDialogue: ModelViewerDownloadDialogue;
-  shareDialogue: ModelViewerShareDialogue;
-  settingsDialogue: ModelViewerSettingsDialogue;
+  centerPanel: AlephR3FCenterPanel;
+  downloadDialogue: AlephR3FDownloadDialogue;
+  shareDialogue: AlephR3FShareDialogue;
+  settingsDialogue: AlephR3FSettingsDialogue;
 };
 
 export type Config = BaseConfig & {

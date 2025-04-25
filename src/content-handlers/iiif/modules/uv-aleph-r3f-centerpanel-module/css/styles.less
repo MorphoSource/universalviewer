@@ -12,24 +12,56 @@
       #viewer {
         background: none;
 
-        &.has-title {
-          #scene-toolbar {
-            top: -45px;
-          }
-        }
-
-        &:not(.has-title) {
-          #scene-toolbar {
-            top: -15px;
-          }
-        }
-
         .control-component { 
           background: #1f1f26 !important;
         }
 
+        // Toolbar positioning
+
         #annotation-toolbar {
-          bottom: 0;
+          bottom: 8px;
+
+          button {
+            height: 26px;
+          }
+
+          div[role="toolbar"] {
+            max-width: 200px;
+
+            @media only screen and (min-width: @md-min-width) {
+              max-width: 300px;
+            } 
+          }
+        }
+
+        &.has-footer-panel #annotation-toolbar {
+          bottom: 0px;
+        }
+
+        #scene-toolbar {
+          right: 0;
+          top: -15px;
+
+          button {
+            width: 26px;
+            height: 26px;
+          }
+        }
+
+        &.has-title #scene-toolbar {
+          top: -45px;
+        }
+        
+        &.has-right-panel #scene-toolbar {
+          @media only screen and (min-width: @md-min-width) {
+            right: 8px;
+          }  
+        }
+        
+        &:not(.has-toolbars) {
+          div[role="toolbar"] {
+            display: none;
+          }
         }
       }
     }

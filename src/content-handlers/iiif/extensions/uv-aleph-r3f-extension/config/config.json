@@ -234,10 +234,7 @@
         "subtitleEnabled": true,
         "mostSpecificRequiredStatement": true,
         "requiredStatementEnabled": true,
-        "autoRotateEnabled": false,
-        "cameraChangeDelay": 500,
-        "interactionPromptEnabled": false,
-        "doubleClickAnnotationEnabled": false
+        "toolbarsEnabled": true
       },
       "content": {
         "attribution": "$attribution",

@@ -20,7 +20,7 @@ export class AlephR3FLeftPanel extends LeftPanel<
     this.setConfig("leftPanel");
     super.create();
 
-    this.setTitle("CONTROLS");
+    this.setTitle("TOOLS");
 
     this.$controlPanelContainer = $('<div id="control-panel"></div>');
     this.$controlPanelContainer.css("width", "100%");
