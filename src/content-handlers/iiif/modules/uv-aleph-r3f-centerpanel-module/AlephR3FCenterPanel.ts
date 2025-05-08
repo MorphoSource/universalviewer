@@ -144,7 +144,10 @@ export class AlephR3FCenterPanel extends CenterPanel<
 
       // If comment annotation has scope content state cameras, use first for annotation camera properties
       const scopeContent = annotation.getScopeContent();
-      const camera = scopeContent.find(anno => anno?.getBody()[0]?.constructor?.name === 'Camera' );
+      const camera = scopeContent.find(anno => 
+        anno?.getBody()[0]?.getPropertyFromSelfOrSource("type") === 'PerspectiveCamera' ||
+        anno?.getBody()[0]?.getPropertyFromSelfOrSource("type") === 'OrthographicCamera'
+      );
       if (camera) {
         // Camera position
         const cameraTarget = camera.getTarget();
@@ -176,7 +179,6 @@ export class AlephR3FCenterPanel extends CenterPanel<
     if (alephComments.length && srcs.length) {
       srcs[0].annotations = alephComments;
     }
-
 
     this.viewerRoot.render(
       createElement(Viewer, {
