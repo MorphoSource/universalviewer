@@ -79,13 +79,14 @@ export class AlephR3FCenterPanel extends CenterPanel<
     const paintingAnnotationBodies: AnnotationBody[] = paintingAnnotations.map(
       (annotation) => annotation.getBody()[0]
     );
+
+    let rotationPreset: [x: number, y: number, z: number] = [0, 0, 0];
     
     const srcs: SrcObj[] = paintingAnnotationBodies.map((annotation) => {
       if (annotation.getResourceID()) {
         const srcObj: SrcObj = {
           url: annotation.getResourceID() as string,
           position: [0, 0, 0],
-          rotation: [0, 0, 0],
           scale: [1, 1, 1]
         };
 
@@ -93,9 +94,12 @@ export class AlephR3FCenterPanel extends CenterPanel<
         const matrix = annotation.getTransformMatrix();
         if (matrix) {
           const { translation, rotation, scale } = decomposeMatrix(matrix);
+          // Position and scale are applied to the model and will not affect commenting annotations
           srcObj.position = translation.toArray().slice(0, 3) as [x: number, y: number, z: number];
-          srcObj.rotation = rotation.toArray().slice(0, 3) as [x: number, y: number, z: number];
           srcObj.scale = scale.toArray().slice(0, 3) as [x: number, y: number, z: number];
+
+          // Rotation is applied to model-encompassing scene and will affect commenting annotations
+          rotationPreset = (rotation.toArray().slice(0, 3) as [x: number, y: number, z: number]);
         }
 
         return srcObj;
@@ -103,6 +107,18 @@ export class AlephR3FCenterPanel extends CenterPanel<
         return null;
       }
     }).filter((srcObj): srcObj is SrcObj => !!srcObj);
+
+    // Special handling for decomposed rotation values 
+
+    // Any rotation values that are very small (close to zero) are set to zero
+    rotationPreset = rotationPreset.map((n) => Math.abs(n) <= 1e-6 ? 0 : n ) as [x: number, y: number, z: number];
+
+    // Correct special case for rotation around the y-axis
+    if (rotationPreset[0] === -Math.PI && rotationPreset[2] === -Math.PI) {
+      rotationPreset[0] = 0;
+      rotationPreset[1] = (rotationPreset[1] >= 0 ? Math.PI : -Math.PI) - rotationPreset[1];
+      rotationPreset[2] = 0;
+    }
 
     const commentingAnnotations: Annotation[] = canvas.getNonContentAnnotations().filter(
       (anno) => ([].concat(anno.getProperty('motivation')))[0] === 'commenting'
@@ -168,8 +184,12 @@ export class AlephR3FCenterPanel extends CenterPanel<
         if (lookAt instanceof PointSelector) {
           const lookAtLocation = lookAt.getLocation();
           comment.cameraTarget = [ lookAtLocation.x, lookAtLocation.y, lookAtLocation.z ];
+        } else if (lookAt instanceof SpecificResource) {
+          const lookAtLocation = lookAt?.getSelector()?.getLocation();
+          if (lookAtLocation) {
+            comment.cameraTarget = [ lookAtLocation.x, lookAtLocation.y, lookAtLocation.z ];
+          }
         }
-
       }
       
       return comment;
@@ -183,6 +203,7 @@ export class AlephR3FCenterPanel extends CenterPanel<
     this.viewerRoot.render(
       createElement(Viewer, {
         environmentMap: 'warehouse',
+        rotationPreset: rotationPreset,
         src: srcs,
         onLoad: (e) => {
           this.resize();
