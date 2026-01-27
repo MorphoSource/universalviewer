@@ -1,5 +1,5 @@
 const $ = require("jquery");
-import { Annotation, AnnotationBody, Camera, Canvas, IExternalResource, PointSelector, SpecificResource, decomposeMatrix } from "manifesto.js";
+import { Annotation, Camera, Canvas, IExternalResource, PointSelector, SpecificResource } from "manifesto.js";
 import { sanitize } from "../../../../Utils";
 import { IIIFEvents } from "../../IIIFEvents";
 import { CenterPanel } from "../uv-shared-module/CenterPanel";
@@ -76,24 +76,24 @@ export class AlephR3FCenterPanel extends CenterPanel<
     const paintingAnnotations: Annotation[] = annotations.filter(
       (anno) => ([].concat(anno.getProperty('motivation')))[0] === 'painting'
     );
-    const paintingAnnotationBodies: AnnotationBody[] = paintingAnnotations.map(
-      (annotation) => annotation.getBody()[0]
-    );
 
     let rotationPreset: [x: number, y: number, z: number] = [0, 0, 0];
-    
-    const srcs: SrcObj[] = paintingAnnotationBodies.map((annotation) => {
-      if (annotation.getResourceID()) {
+
+    // get and prepare models from painting annotations
+    const srcs: SrcObj[] = paintingAnnotations.map((annotation) => {
+      const annotationBody = annotation.getBody()[0];
+
+      if (annotationBody.getType() === 'model' && annotationBody.getResourceID()) {
         const srcObj: SrcObj = {
-          url: annotation.getResourceID() as string,
+          url: annotationBody.getResourceID() as string,
           position: [0, 0, 0],
           scale: [1, 1, 1]
         };
 
-        // Process transforms 
-        const matrix = annotation.getTransformMatrix();
-        if (matrix) {
-          const { translation, rotation, scale } = decomposeMatrix(matrix);
+        // Process transforms
+        const transformSet = annotationBody.getTransformSet();
+        if (transformSet) {
+          const { translation, rotation, scale } = transformSet;
           // Position and scale are applied to the model and will not affect commenting annotations
           srcObj.position = translation.toArray().slice(0, 3) as [x: number, y: number, z: number];
           srcObj.scale = scale.toArray().slice(0, 3) as [x: number, y: number, z: number];
@@ -102,13 +102,29 @@ export class AlephR3FCenterPanel extends CenterPanel<
           rotationPreset = (rotation.toArray().slice(0, 3) as [x: number, y: number, z: number]);
         }
 
+        // If the annotation target has a selector, use it to get the position
+        const target = annotation.getTarget();
+        // target can either be scene reference (place at origin) or a specific resource
+        // todo - handle specific scenes
+        if (target.isSpecificResource) {
+          const selector = (target as SpecificResource).getSelector();
+          if (selector) {
+            const point = selector.getLocation();
+            if (point) {
+              srcObj.position![0] = srcObj.position![0] + point.x;
+              srcObj.position![1] = srcObj.position![1] + point.y;
+              srcObj.position![2] = srcObj.position![2] + point.z;
+            }
+          }
+        }
+
         return srcObj;
       } else {
         return null;
       }
     }).filter((srcObj): srcObj is SrcObj => !!srcObj);
 
-    // Special handling for decomposed rotation values 
+    // Special handling for decomposed rotation values
 
     // Any rotation values that are very small (close to zero) are set to zero
     rotationPreset = rotationPreset.map((n) => Math.abs(n) <= 1e-6 ? 0 : n ) as [x: number, y: number, z: number];
@@ -123,7 +139,7 @@ export class AlephR3FCenterPanel extends CenterPanel<
     const commentingAnnotations: Annotation[] = canvas.getNonContentAnnotations().filter(
       (anno) => ([].concat(anno.getProperty('motivation')))[0] === 'commenting'
     );
-    
+
     const alephComments = commentingAnnotations.map((annotation) => {
       const comment: {
         label: string,
@@ -138,7 +154,11 @@ export class AlephR3FCenterPanel extends CenterPanel<
 
       // Comment annotation label
       const body = annotation.getBody()[0];
-      if (body.getType() === 'textualbody') comment.label = body.getProperty("value") || "" ;
+      if (body.getType() === 'textualbody') {
+        let commentValue = body.getProperty("value");
+        if (typeof commentValue === 'object' && 'value' in commentValue) commentValue = commentValue.value;
+        comment.label = commentValue || "";
+      }
 
       // Comment annotation summary description
       const summary = annotation.getSummary();
@@ -160,7 +180,7 @@ export class AlephR3FCenterPanel extends CenterPanel<
 
       // If comment annotation has scope content state cameras, use first for annotation camera properties
       const scopeContent = annotation.getScopeContent();
-      const camera = scopeContent.find(anno => 
+      const camera = scopeContent.find(anno =>
         anno?.getBody()[0]?.getPropertyFromSelfOrSource("type") === 'PerspectiveCamera' ||
         anno?.getBody()[0]?.getPropertyFromSelfOrSource("type") === 'OrthographicCamera'
       );
@@ -191,7 +211,7 @@ export class AlephR3FCenterPanel extends CenterPanel<
           }
         }
       }
-      
+
       return comment;
     });
 

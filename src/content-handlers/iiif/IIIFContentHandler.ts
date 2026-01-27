@@ -104,6 +104,18 @@ const Extension: IExtensionRegistry = {
   },
 };
 
+const SceneResourceType = {
+  PERSPECTIVE_CAMERA: "perspectivecamera",
+  ORTHOGRAPHIC_CAMERA: "orthographiccamera",
+  AMBIENT_LIGHT: "ambientlight",
+  DIRECTIONAL_LIGHT: "directionallight",
+  POINT_LIGHT: "pointlight",
+  SPOT_LIGHT: "spotlight",
+  AMBIENT_AUDIO: "ambientaudio",
+  POINT_AUDIO: "pointaudio",
+  SPOT_AUDIO: "spotaudio",
+};
+
 export default class IIIFContentHandler extends BaseContentHandler<IIIFData>
   implements IIIFExtensionHost, IContentHandler<IIIFData> {
   private _extensionRegistry: IExtensionRegistry;
@@ -155,6 +167,15 @@ export default class IIIFContentHandler extends BaseContentHandler<IIIFData>
     this._extensionRegistry[MediaType.WAV] = Extension.AV;
     this._extensionRegistry[MediaType.WEBM] = Extension.AV;
     this._extensionRegistry[RenderingFormat.PDF] = Extension.PDF;
+    this._extensionRegistry[SceneResourceType.PERSPECTIVE_CAMERA] = Extension.ALEPH;
+    this._extensionRegistry[SceneResourceType.ORTHOGRAPHIC_CAMERA] = Extension.ALEPH;
+    this._extensionRegistry[SceneResourceType.AMBIENT_LIGHT] = Extension.ALEPH;
+    this._extensionRegistry[SceneResourceType.DIRECTIONAL_LIGHT] = Extension.ALEPH;
+    this._extensionRegistry[SceneResourceType.POINT_LIGHT] = Extension.ALEPH;
+    this._extensionRegistry[SceneResourceType.SPOT_LIGHT] = Extension.ALEPH;
+    this._extensionRegistry[SceneResourceType.AMBIENT_AUDIO] = Extension.ALEPH;
+    this._extensionRegistry[SceneResourceType.POINT_AUDIO] = Extension.ALEPH;
+    this._extensionRegistry[SceneResourceType.SPOT_AUDIO] = Extension.ALEPH;
 
     this.on(
       Events.CREATED,
