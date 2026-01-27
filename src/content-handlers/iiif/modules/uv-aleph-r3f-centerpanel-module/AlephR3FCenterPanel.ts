@@ -152,17 +152,32 @@ export class AlephR3FCenterPanel extends CenterPanel<
         position: [0.0, 0.0, 0.0] as [x: number, y: number, z: number]
       }
 
+      let label = "";
+      let description = "";
+
       // Comment annotation label
       const body = annotation.getBody()[0];
       if (body.getType() === 'textualbody') {
-        let commentValue = body.getProperty("value");
+        let commentValue = body.getProperty("value") || "";
         if (typeof commentValue === 'object' && 'value' in commentValue) commentValue = commentValue.value;
-        comment.label = commentValue || "";
+        label = commentValue || "";
       }
 
       // Comment annotation summary description
       const summary = annotation.getSummary();
-      if (summary.getValue()) comment.description = summary.getValue()!;
+      if (summary.getValue()) description = summary.getValue()!;
+
+      // Special case - if no summary and newline in label, split to label and summary
+      if (!description) {
+        const parts = label.split(/\r\n|\r|\n/);
+        if (parts.length > 1) {
+          label = parts[0];
+          description = parts.slice(1).join('\n');
+        }
+      }
+
+      comment.label = label;
+      comment.description = description;
 
       // Comment annotation position
       const target = annotation.getTarget();
