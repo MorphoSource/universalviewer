@@ -5,7 +5,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["aleph-r3f-prezi-4-beta"]
+    branches: ["aleph-r3f-prezi-4-beta", "aleph-r3f-prezi4-v2"]
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
