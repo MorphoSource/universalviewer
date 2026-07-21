@@ -1,4 +1,4 @@
-import { Annotation, Camera, Canvas, PointSelector, SpecificResource } from "manifesto.js";
+import { Annotation, Camera, Canvas, Manifest, PointSelector, SpecificResource } from "manifesto.js";
 import { InitialCameraConfig, SrcObj } from "aleph-r3f";
 
 export type AlephComment = {
@@ -107,6 +107,35 @@ function extractImageUrl(canvas: Canvas): string | undefined {
     }
   }
   return undefined;
+}
+
+/**
+ * Gather non-content (i.e. non-painting) annotations relevant to a Scene/Canvas
+ * from both the Scene/Canvas's own `annotations` property and the Manifest's
+ * top-level `annotations` property.
+ * Manifest-level annotations are included if they target this Scene/Canvas
+ * directly, or if they're activating annotations (which target another
+ * Annotation, e.g. a comment, rather than the Scene/Canvas itself).
+ */
+export function getAllNonContentAnnotations(
+  manifest: Manifest | undefined,
+  canvas: Canvas
+): Annotation[] {
+  const manifestAnnotations = manifest?.getNonContentAnnotations() ?? [];
+
+  const relevantManifestAnnotations = manifestAnnotations.filter((annotation) => {
+    const target = annotation.getTarget();
+    if (!target) return false;
+
+    if (target.type === 'Annotation') return true;
+
+    const targetId = target.isSpecificResource
+      ? (target.getSource() as any)?.id
+      : target.id;
+    return targetId === canvas.id;
+  });
+
+  return [...canvas.getNonContentAnnotations(), ...relevantManifestAnnotations];
 }
 
 /**
@@ -250,13 +279,80 @@ export function buildInitialCameraConfig(
 }
 
 /**
+ * Whether an Annotation's body is a PerspectiveCamera/OrthographicCamera.
+ */
+function isCameraAnnotation(annotation: Annotation | undefined): annotation is Annotation {
+  if (!annotation) return false;
+  const body = annotation.getBody()[0];
+  const t = body?.getPropertyFromSelfOrSource('type');
+  return t === 'PerspectiveCamera' || t === 'OrthographicCamera';
+}
+
+/**
+ * Fill in an AlephComment's camera fields from a resolved camera Annotation.
+ * Shared by both the `scope`-shorthand and explicit `activating`-annotation
+ * camera resolution paths below.
+ */
+function applyCameraAnnotation(
+  comment: AlephComment,
+  cameraAnno: Annotation,
+  paintingAnnotations: Annotation[]
+): void {
+  // Camera position: from the camera annotation's target PointSelector
+  const cameraTarget = cameraAnno.getTarget();
+  if (cameraTarget.isSpecificResource) {
+    const pt = (cameraTarget as SpecificResource).getSelector()?.getLocation();
+    if (pt) comment.cameraPosition = [pt.x, pt.y, pt.z];
+  }
+
+  const cameraBody = cameraAnno.getBody()[0] as Camera;
+
+  comment.cameraTarget = resolveLookAt(cameraBody.getLookAt(), paintingAnnotations);
+
+  const fov = cameraBody.getFieldOfView();
+  if (fov !== undefined) comment.cameraFieldOfView = fov;
+  const near = cameraBody.getNear(); if (near !== undefined) comment.cameraNear = near;
+  const far  = cameraBody.getFar();  if (far  !== undefined) comment.cameraFar  = far;
+}
+
+/**
+ * Resolve the camera a comment activates via an explicit `activating`-motivation
+ * Annotation: `target` references the commenting Annotation, and `body` is one
+ * or more SpecificResources whose `source` references the camera's painting
+ * Annotation (see IIIF Presentation 4.0 "3D Comments with Cameras").
+ */
+function findActivatedCamera(
+  commentAnnotation: Annotation,
+  activatingAnnotations: Annotation[],
+  paintingAnnotations: Annotation[]
+): Annotation | undefined {
+  const activating = activatingAnnotations.filter(
+    (a) => a.getTarget()?.id === commentAnnotation.id
+  );
+
+  for (const activatingAnno of activating) {
+    for (const body of activatingAnno.getBody()) {
+      if (!body.isSpecificResource()) continue;
+      const source = body.getSource();
+      if (!source || typeof source === 'string') continue;
+      const cameraAnno = paintingAnnotations.find((pa) => pa.id === source.id);
+      if (isCameraAnnotation(cameraAnno)) return cameraAnno;
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Build the list of commenting annotations mapped to aleph-r3f's comment
- * format. Resolves scope camera references using the Presentation 4 `scope`
- * top-level property (array of annotation references).
+ * format. Resolves an associated camera via either the Presentation 4 `scope`
+ * shorthand (an array of annotation references directly on the comment) or an
+ * explicit `activating`-motivation Annotation targeting the comment.
  */
 export function buildAlephComments(
   commentingAnnotations: Annotation[],
-  paintingAnnotations: Annotation[]
+  paintingAnnotations: Annotation[],
+  activatingAnnotations: Annotation[] = []
 ): AlephComment[] {
   return commentingAnnotations.map((annotation) => {
     const comment: AlephComment = {
@@ -300,28 +396,11 @@ export function buildAlephComments(
     const cameraAnno = scopeRefs
       .filter(s => s.type === 'Annotation' && s.id)
       .map(s => paintingAnnotations.find(pa => pa.id === s.id))
-      .find((pa): pa is Annotation => {
-        if (!pa) return false;
-        const t = pa.getBody()[0]?.getPropertyFromSelfOrSource('type');
-        return t === 'PerspectiveCamera' || t === 'OrthographicCamera';
-      });
+      .find(isCameraAnnotation)
+      ?? findActivatedCamera(annotation, activatingAnnotations, paintingAnnotations);
 
     if (cameraAnno) {
-      // Camera position: from the camera annotation's target PointSelector
-      const cameraTarget = cameraAnno.getTarget();
-      if (cameraTarget.isSpecificResource) {
-        const pt = (cameraTarget as SpecificResource).getSelector()?.getLocation();
-        if (pt) comment.cameraPosition = [pt.x, pt.y, pt.z];
-      }
-
-      const cameraBody = cameraAnno.getBody()[0] as Camera;
-
-      comment.cameraTarget = resolveLookAt(cameraBody.getLookAt(), paintingAnnotations);
-
-      const fov = cameraBody.getFieldOfView();
-      if (fov !== undefined) comment.cameraFieldOfView = fov;
-      const near = cameraBody.getNear(); if (near !== undefined) comment.cameraNear = near;
-      const far  = cameraBody.getFar();  if (far  !== undefined) comment.cameraFar  = far;
+      applyCameraAnnotation(comment, cameraAnno, paintingAnnotations);
     }
 
     return comment;

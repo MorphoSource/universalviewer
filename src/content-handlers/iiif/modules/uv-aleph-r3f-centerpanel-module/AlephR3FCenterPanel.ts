@@ -10,7 +10,7 @@ import { Config } from "../../extensions/uv-aleph-r3f-extension/config/Config";
 import { createRoot, Root } from "react-dom/client";
 import { createElement } from "react";
 import { Viewer } from "aleph-r3f";
-import { buildAlephComments, buildInitialCameraConfig, buildSrcs } from "./AlephR3FIIIFAdapter";
+import { buildAlephComments, buildInitialCameraConfig, buildSrcs, getAllNonContentAnnotations } from "./AlephR3FIIIFAdapter";
 
 export class AlephR3FCenterPanel extends CenterPanel<
   Config["modules"]["centerPanel"]
@@ -78,14 +78,20 @@ export class AlephR3FCenterPanel extends CenterPanel<
       (anno) => ([].concat(anno.getProperty('motivation')))[0] === 'painting'
     );
 
-    const commentingAnnotations = canvas.getNonContentAnnotations().filter(
+    const nonContentAnnotations = getAllNonContentAnnotations(this.extension.helper.manifest, canvas);
+
+    const commentingAnnotations = nonContentAnnotations.filter(
       (anno) => ([].concat(anno.getProperty('motivation')))[0] === 'commenting'
+    );
+
+    const activatingAnnotations = nonContentAnnotations.filter(
+      (anno) => ([].concat(anno.getProperty('motivation')))[0] === 'activating'
     );
 
     const canvasResolver = (id: string) => this.extension.helper.getCanvasById(id);
     const { srcs, rotationPreset } = buildSrcs(paintingAnnotations, canvasResolver);
     const initialCameraConfig = buildInitialCameraConfig(paintingAnnotations);
-    const alephComments = buildAlephComments(commentingAnnotations, paintingAnnotations);
+    const alephComments = buildAlephComments(commentingAnnotations, paintingAnnotations, activatingAnnotations);
 
     // Attach comments to the first model src
     if (alephComments.length && srcs.length) {
