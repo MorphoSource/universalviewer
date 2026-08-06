@@ -1,16 +1,16 @@
 @import "overrides.less";
 
 .uv-iiif-extension-host.uv-aleph-r3f-extension {
-  background: radial-gradient(circle, #42424d, #212126) !important;
+  background: var(--uv-background-color, radial-gradient(circle, #42424d, #212126)) !important;
 
   .mainPanel {
-    background: none; 
+    background: none;
 
-    .centerPanel {  
+    .centerPanel {
       #viewer {
         background: none;
 
-        .control-component { 
+        .control-component {
           background: #1f1f26 !important;
         }
 
@@ -28,7 +28,7 @@
 
             @media only screen and (min-width: @md-min-width) {
               max-width: 300px;
-            } 
+            }
           }
         }
 
@@ -49,13 +49,13 @@
         &.has-title #scene-toolbar {
           top: -45px;
         }
-        
+
         &.has-right-panel #scene-toolbar {
           @media only screen and (min-width: @md-min-width) {
             right: 8px;
-          }  
+          }
         }
-        
+
         &:not(.has-toolbars) {
           div[role="toolbar"] {
             display: none;
