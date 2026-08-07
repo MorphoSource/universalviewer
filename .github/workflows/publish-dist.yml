@@ -37,7 +37,7 @@ jobs:
       - name: Package dist
         run: tar -czf dist.tar.gz -C dist .
 
-      - name: Publish release
+      - name: Publish release archive
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: build-${{ github.sha }}
