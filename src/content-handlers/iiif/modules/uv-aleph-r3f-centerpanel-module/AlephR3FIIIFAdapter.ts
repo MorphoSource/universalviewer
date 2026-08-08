@@ -140,7 +140,9 @@ export function getAllNonContentAnnotations(
 
 /**
  * Build the list of model/canvas SrcObjs from painting annotations.
- * Each model's position, rotation, and scale come from its own transforms.
+ * Position and scale come from each model's own transform. Rotation is pulled out separately:
+ * with one model in the scene, rotation is returned as rotationPreset for annotation and
+ * camera positioning. With >1 model, each keeps its own local rotation, rotationPreset is zero.
  * Canvas bodies are resolved to image planes using the optional canvasResolver.
  * Camera and Light bodies are skipped.
  */
@@ -226,7 +228,20 @@ export function buildSrcs(
     return null;
   }).filter((srcObj): srcObj is SrcObj => !!srcObj);
 
-  return { srcs, rotationPreset: [0, 0, 0] };
+  const modelSrcs = srcs.filter((src) => !src.type); // models don't specify type, canvas and dicom do
+
+  // todo: in the future, update aleph-r3f and undo this
+  // this was done because aleph uses rotation preset to rotate input annotation coords
+  // but by strict presentation 4, model rotate transform should only affect model
+  // and anno coords should be independent from this rotation
+  // (AKA anno coords should align with post-transform model, not pre-transform)
+  let rotationPreset: [number, number, number] = [0, 0, 0];
+  if (modelSrcs.length === 1) {
+    rotationPreset = modelSrcs[0].rotation as [number, number, number];
+    modelSrcs[0].rotation = [0, 0, 0];
+  }
+
+  return { srcs, rotationPreset };
 }
 
 /**
