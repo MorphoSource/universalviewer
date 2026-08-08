@@ -151,7 +151,7 @@ export default class IIIFContentHandler extends BaseContentHandler<IIIFData>
     this._extensionRegistry[ExternalResourceType.SOUND] =
       Extension.MEDIAELEMENT;
     this._extensionRegistry[MediaType.AUDIO_MP4] = Extension.AV;
-    this._extensionRegistry[MediaType.DICOM] = Extension.ALEPHLEGACY;
+    this._extensionRegistry[MediaType.DICOM] = Extension.ALEPH;
     this._extensionRegistry[MediaType.DRACO] = Extension.ALEPH;
     this._extensionRegistry[MediaType.EPUB] = Extension.EBOOK;
     this._extensionRegistry[MediaType.GIRDER] = Extension.SLIDEATLAS;

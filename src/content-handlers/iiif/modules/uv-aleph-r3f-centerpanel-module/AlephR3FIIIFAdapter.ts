@@ -1,5 +1,6 @@
 import { Annotation, Camera, Canvas, Manifest, PointSelector, SpecificResource } from "manifesto.js";
 import { InitialCameraConfig, SrcObj } from "aleph-r3f";
+import { MediaType } from "@iiif/vocabulary/dist-commonjs/";
 
 export type AlephComment = {
   label: string;
@@ -170,6 +171,11 @@ export function buildSrcs(
         srcObj.scale = scale.toArray().slice(0, 3) as [number, number, number];
       }
 
+      // DICOM models are volumes, rendered by aleph-r3f's volume renderer rather than as a mesh
+      if (annotationBody.getFormat() === MediaType.DICOM) {
+        srcObj.type = 'volume';
+      }
+
       const target = annotation.getTarget();
       if (target.isSpecificResource) {
         const selector = (target as SpecificResource).getSelector();
@@ -228,7 +234,7 @@ export function buildSrcs(
     return null;
   }).filter((srcObj): srcObj is SrcObj => !!srcObj);
 
-  const modelSrcs = srcs.filter((src) => !src.type); // models don't specify type, canvas and dicom do
+  const nonCanvasSrcs = srcs.filter((src) => src.type !== 'canvas');
 
   // todo: in the future, update aleph-r3f and undo this
   // this was done because aleph uses rotation preset to rotate input annotation coords
@@ -236,9 +242,9 @@ export function buildSrcs(
   // and anno coords should be independent from this rotation
   // (AKA anno coords should align with post-transform model, not pre-transform)
   let rotationPreset: [number, number, number] = [0, 0, 0];
-  if (modelSrcs.length === 1) {
-    rotationPreset = modelSrcs[0].rotation as [number, number, number];
-    modelSrcs[0].rotation = [0, 0, 0];
+  if (nonCanvasSrcs.length === 1) {
+    rotationPreset = nonCanvasSrcs[0].rotation as [number, number, number];
+    nonCanvasSrcs[0].rotation = [0, 0, 0];
   }
 
   return { srcs, rotationPreset };
